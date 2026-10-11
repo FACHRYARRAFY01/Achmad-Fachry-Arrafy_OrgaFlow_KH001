@@ -33,7 +33,9 @@ class FakeAuthService implements AuthService {
 
 void main() {
   group('Widget UI & Dashboard Tests', () {
-    testWidgets('RoleBadge menampilkan PENGURUS dan ANGGOTA dengan benar', (tester) async {
+    testWidgets('RoleBadge menampilkan PENGURUS dan ANGGOTA dengan benar', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
@@ -52,7 +54,9 @@ void main() {
       expect(find.text('ANGGOTA'), findsOneWidget);
     });
 
-    testWidgets('ManagementDashboard menampilkan identitas Pengurus dan kartu modul', (tester) async {
+    testWidgets('ManagementDashboard menampilkan dashboard khusus Ketua', (
+      tester,
+    ) async {
       final officerProfile = UserProfile(
         uid: 'uid-ketua',
         nama: 'Fakhri Herlambang',
@@ -72,55 +76,134 @@ void main() {
         ),
       );
 
-      expect(find.text('PENGURUS'), findsOneWidget);
-      expect(find.text('Role: Ketua'), findsOneWidget);
-      expect(find.text('Selamat datang, Fakhri Herlambang'), findsOneWidget);
-      expect(find.text('Dashboard Pengurus'), findsOneWidget);
-      expect(find.text('Kegiatan Organisasi'), findsOneWidget);
-      expect(find.text('Tugas Divisi'), findsOneWidget);
-      expect(find.text('Data Anggota'), findsOneWidget);
-      expect(find.text('Pengumuman'), findsOneWidget);
-      expect(find.text('Keluar dari Aplikasi'), findsOneWidget);
+      expect(find.text('Aktif'), findsOneWidget);
+      expect(find.text('Halo, Fakhri Herlambang 👋'), findsOneWidget);
+      expect(find.text('Persetujuan'), findsOneWidget);
+      expect(find.text('Proker Berjalan'), findsOneWidget);
+      expect(find.text('Persetujuan Penting'), findsOneWidget);
+      expect(find.text('Proposal IT Fest (Revisi Anggaran)'), findsOneWidget);
+      expect(find.text('Agenda Berikutnya'), findsOneWidget);
+      expect(find.text('Rapat Evaluasi Bersama BPH & BO'), findsOneWidget);
     });
 
-    testWidgets('MemberDashboard menampilkan identitas Anggota dan layout berbeda', (tester) async {
-      final memberProfile = UserProfile(
-        uid: 'uid-anggota',
-        nama: 'Budi Santoso',
-        email: 'budi@hima-ti.org',
-        nim: '22003344',
-        role: UserRole.anggota,
-        divisiId: 'divisi_media_dan_informasi',
+    testWidgets('Navigasi bawah membuka placeholder dan kembali ke Beranda', (
+      tester,
+    ) async {
+      final officerProfile = UserProfile(
+        uid: 'uid-ketua',
+        nama: 'Fakhri Herlambang',
+        email: 'fakhri@hima-ti.org',
+        role: UserRole.ketua,
         wajibGantiPassword: false,
         statusAkun: 'aktif',
       );
 
       await tester.pumpWidget(
         MaterialApp(
-          home: MemberDashboard(
-            profile: memberProfile,
+          home: ManagementDashboard(
+            profile: officerProfile,
             authService: FakeAuthService(),
           ),
         ),
       );
 
-      expect(find.text('ANGGOTA'), findsOneWidget);
-      expect(find.text('Halo, Budi Santoso!'), findsOneWidget);
-      expect(find.text('Dashboard Anggota'), findsOneWidget);
-      expect(find.text('Tugas Saya'), findsOneWidget);
-      expect(find.text('Kegiatan'), findsOneWidget);
-      expect(find.text('Absensi'), findsOneWidget);
-      expect(find.text('Pengumuman'), findsOneWidget);
-      expect(find.text('Keluar dari Aplikasi'), findsOneWidget);
+      expect(find.text('Beranda'), findsOneWidget);
+      expect(find.text('Tugas'), findsOneWidget);
+      expect(find.text('Agenda'), findsOneWidget);
+      expect(find.text('Kas'), findsOneWidget);
+
+      await tester.tap(find.text('Tugas'));
+      await tester.pumpAndSettle();
+      expect(find.text('Ini halaman Tugas'), findsOneWidget);
+
+      await tester.tap(find.text('Agenda'));
+      await tester.pumpAndSettle();
+      expect(find.text('Ini halaman Agenda'), findsOneWidget);
+
+      await tester.tap(find.text('Kas'));
+      await tester.pumpAndSettle();
+      expect(find.text('Ini halaman Kas'), findsOneWidget);
+
+      await tester.tap(find.text('Beranda'));
+      await tester.pumpAndSettle();
+      expect(find.text('Persetujuan Penting'), findsOneWidget);
     });
+
+    testWidgets(
+      'ManagementDashboard menyesuaikan ringkasan tiap role dan agenda tetap sama',
+      (tester) async {
+        final roles = {
+          UserRole.wakilKetua: ('Program Dipantau', 'Pemantauan Penting'),
+          UserRole.sekretaris: ('Surat Masuk', 'Dokumen Perlu Ditinjau'),
+          UserRole.bendahara: ('Pengajuan Dana', 'Persetujuan Keuangan'),
+          UserRole.kepalaDivisi: ('Tugas Divisi', 'Tindak Lanjut Divisi'),
+        };
+
+        for (final entry in roles.entries) {
+          final profile = UserProfile(
+            uid: 'uid-${entry.key.firestoreValue}',
+            nama: 'Pengurus',
+            email: 'pengurus@hima-ti.org',
+            role: entry.key,
+            wajibGantiPassword: false,
+            statusAkun: 'aktif',
+          );
+
+          await tester.pumpWidget(
+            MaterialApp(
+              home: ManagementDashboard(
+                profile: profile,
+                authService: FakeAuthService(),
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          expect(find.text(entry.value.$1), findsOneWidget);
+          expect(find.text(entry.value.$2), findsOneWidget);
+          expect(find.text('Agenda Berikutnya'), findsOneWidget);
+          expect(find.text('Rapat Evaluasi Bersama BPH & BO'), findsOneWidget);
+        }
+      },
+    );
+
+    testWidgets(
+      'MemberDashboard menampilkan identitas Anggota dan layout berbeda',
+      (tester) async {
+        final memberProfile = UserProfile(
+          uid: 'uid-anggota',
+          nama: 'Budi Santoso',
+          email: 'budi@hima-ti.org',
+          nim: '22003344',
+          role: UserRole.anggota,
+          divisiId: 'divisi_media_dan_informasi',
+          wajibGantiPassword: false,
+          statusAkun: 'aktif',
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: MemberDashboard(
+              profile: memberProfile,
+              authService: FakeAuthService(),
+            ),
+          ),
+        );
+
+        expect(find.text('ANGGOTA'), findsOneWidget);
+        expect(find.text('Halo, Budi Santoso!'), findsOneWidget);
+        expect(find.text('Dashboard Anggota'), findsOneWidget);
+        expect(find.text('Tugas Saya'), findsOneWidget);
+        expect(find.text('Kegiatan'), findsOneWidget);
+        expect(find.text('Absensi'), findsOneWidget);
+        expect(find.text('Pengumuman'), findsOneWidget);
+        expect(find.text('Keluar dari Aplikasi'), findsOneWidget);
+      },
+    );
 
     testWidgets('LoginScreen memvalidasi input kosong', (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
-          home: LoginScreen(
-            authService: FakeAuthService(),
-          ),
-        ),
+        MaterialApp(home: LoginScreen(authService: FakeAuthService())),
       );
 
       expect(find.text('Selamat Datang di OrgaFlow'), findsOneWidget);
