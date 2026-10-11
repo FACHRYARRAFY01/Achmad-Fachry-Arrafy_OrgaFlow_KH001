@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -7,6 +8,7 @@ import 'package:flutter_orgaflow/screens/auth/login_screen.dart';
 import 'package:flutter_orgaflow/screens/dashboard/management_dashboard.dart';
 import 'package:flutter_orgaflow/screens/dashboard/member_dashboard.dart';
 import 'package:flutter_orgaflow/services/auth_service.dart';
+import 'package:flutter_orgaflow/services/division_service.dart';
 import 'package:flutter_orgaflow/widgets/role_badge.dart';
 
 class FakeAuthService implements AuthService {
@@ -29,6 +31,26 @@ class FakeAuthService implements AuthService {
 
   @override
   Future<void> signOut() async {}
+}
+
+class FakeDivisionNameLoader implements DivisionNameLoader {
+  final Object? error;
+
+  FakeDivisionNameLoader({this.error});
+
+  @override
+  Future<String?> getDivisionName(String divisionId) async {
+    if (error != null) {
+      throw error!;
+    }
+    if (divisionId == 'psdm') {
+      return 'Divisi Pengembangan Sumber Daya Mahasiswa';
+    }
+    if (divisionId == 'divisi_media_dan_informasi') {
+      return 'Divisi Media dan Informasi';
+    }
+    return null;
+  }
 }
 
 void main() {
@@ -84,6 +106,41 @@ void main() {
       expect(find.text('Proposal IT Fest (Revisi Anggaran)'), findsOneWidget);
       expect(find.text('Agenda Berikutnya'), findsOneWidget);
       expect(find.text('Rapat Evaluasi Bersama BPH & BO'), findsOneWidget);
+    });
+
+    testWidgets('Dashboard menampilkan error izin Firestore untuk divisi', (
+      tester,
+    ) async {
+      final profile = UserProfile(
+        uid: 'uid-kadiv-psdm',
+        nama: 'Kepala Divisi PSDM',
+        email: 'psdm@hima-ti.org',
+        role: UserRole.kepalaDivisi,
+        divisiId: 'psdm',
+        wajibGantiPassword: false,
+        statusAkun: 'aktif',
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ManagementDashboard(
+            profile: profile,
+            authService: FakeAuthService(),
+            divisionNameLoader: FakeDivisionNameLoader(
+              error: FirebaseException(
+                plugin: 'cloud_firestore',
+                code: 'permission-denied',
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Kepala Divisi • Akses Firestore untuk divisi ditolak'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('Navigasi bawah membuka placeholder dan kembali ke Beranda', (
@@ -145,6 +202,7 @@ void main() {
             nama: 'Pengurus',
             email: 'pengurus@hima-ti.org',
             role: entry.key,
+            divisiId: entry.key == UserRole.kepalaDivisi ? 'psdm' : null,
             wajibGantiPassword: false,
             statusAkun: 'aktif',
           );
@@ -154,6 +212,7 @@ void main() {
               home: ManagementDashboard(
                 profile: profile,
                 authService: FakeAuthService(),
+                divisionNameLoader: FakeDivisionNameLoader(),
               ),
             ),
           );
@@ -163,6 +222,14 @@ void main() {
           expect(find.text(entry.value.$2), findsOneWidget);
           expect(find.text('Agenda Berikutnya'), findsOneWidget);
           expect(find.text('Rapat Evaluasi Bersama BPH & BO'), findsOneWidget);
+          if (entry.key == UserRole.kepalaDivisi) {
+            expect(
+              find.text(
+                'Kepala Divisi • Divisi Pengembangan Sumber Daya Mahasiswa',
+              ),
+              findsOneWidget,
+            );
+          }
         }
       },
     );
@@ -186,12 +253,15 @@ void main() {
             home: MemberDashboard(
               profile: memberProfile,
               authService: FakeAuthService(),
+              divisionNameLoader: FakeDivisionNameLoader(),
             ),
           ),
         );
+        await tester.pumpAndSettle();
 
         expect(find.text('ANGGOTA'), findsOneWidget);
         expect(find.text('Halo, Budi Santoso!'), findsOneWidget);
+        expect(find.text('Divisi Media dan Informasi'), findsOneWidget);
         expect(find.text('Dashboard Anggota'), findsOneWidget);
         expect(find.text('Tugas Saya'), findsOneWidget);
         expect(find.text('Kegiatan'), findsOneWidget);

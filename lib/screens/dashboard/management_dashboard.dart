@@ -5,16 +5,20 @@ import '../../core/theme/app_theme.dart';
 import '../../enums/user_role.dart';
 import '../../models/user_profile.dart';
 import '../../services/auth_service.dart';
+import '../../services/division_service.dart';
 import '../../widgets/confirmation_dialog.dart';
+import '../../widgets/division_name_text.dart';
 
 class ManagementDashboard extends StatefulWidget {
   final UserProfile profile;
   final AuthService? authService;
+  final DivisionNameLoader? divisionNameLoader;
 
   const ManagementDashboard({
     super.key,
     required this.profile,
     this.authService,
+    this.divisionNameLoader,
   });
 
   @override
@@ -196,15 +200,26 @@ class _ManagementDashboardState extends State<ManagementDashboard> {
                   ),
                 ),
                 const SizedBox(height: 3),
-                Text(
-                  '${widget.profile.role.label} • HIMA TI',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: AppTheme.textSecondary,
+                if (widget.profile.role == UserRole.kepalaDivisi)
+                  DivisionNameText(
+                    divisionId: widget.profile.divisiId,
+                    prefix: widget.profile.role.label,
+                    divisionNameLoader: widget.divisionNameLoader,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppTheme.textSecondary,
+                    ),
+                  )
+                else
+                  Text(
+                    '${widget.profile.role.label} • HIMA TI',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppTheme.textSecondary,
+                    ),
                   ),
-                ),
               ],
             ),
           ),

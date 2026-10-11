@@ -10,14 +10,23 @@ import '../../services/auth_service.dart';
 
 import '../../widgets/confirmation_dialog.dart';
 
+import '../../services/division_service.dart';
+import '../../widgets/confirmation_dialog.dart';
+import '../../widgets/division_name_text.dart';
 import '../../widgets/role_badge.dart';
 
 class MemberDashboard extends StatelessWidget {
   final UserProfile profile;
 
   final AuthService? authService;
+  final DivisionNameLoader? divisionNameLoader;
 
-  const MemberDashboard({super.key, required this.profile, this.authService});
+  const MemberDashboard({
+    super.key,
+    required this.profile,
+    this.authService,
+    this.divisionNameLoader,
+  });
 
   Future<void> _handleLogout(BuildContext context) async {
     final confirmed = await ConfirmationDialog.show(
@@ -156,7 +165,6 @@ class MemberDashboard extends StatelessWidget {
 
             const Text(
               'Aktivitas dan tugas Anda di HIMA Teknik Informatika.',
-
               style: TextStyle(fontSize: 13, color: AppTheme.textSecondary),
             ),
 
@@ -277,7 +285,6 @@ class MemberDashboard extends StatelessWidget {
                   horizontal: 10,
                   vertical: 4,
                 ),
-
                 decoration: BoxDecoration(
                   color: AppTheme.anggotaBg,
 
@@ -331,16 +338,15 @@ class MemberDashboard extends StatelessWidget {
               ),
 
               const SizedBox(width: 6),
-
-              Text(
-                _formatDivision(profile.divisiId),
-
-                style: const TextStyle(
-                  fontSize: 13,
-
-                  fontWeight: FontWeight.w600,
-
-                  color: AppTheme.anggotaPrimary,
+              Expanded(
+                child: DivisionNameText(
+                  divisionId: profile.divisiId,
+                  divisionNameLoader: divisionNameLoader,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.anggotaPrimary,
+                  ),
                 ),
               ),
             ],
@@ -360,7 +366,6 @@ class MemberDashboard extends StatelessWidget {
                 size: 14,
                 color: AppTheme.textMuted,
               ),
-
               const SizedBox(width: 6),
 
               Expanded(
@@ -379,13 +384,11 @@ class MemberDashboard extends StatelessWidget {
 
               if (profile.nim != null && profile.nim!.isNotEmpty) ...[
                 const SizedBox(width: 10),
-
                 const Icon(
                   Icons.badge_outlined,
                   size: 14,
                   color: AppTheme.textMuted,
                 ),
-
                 const SizedBox(width: 4),
 
                 Text(
